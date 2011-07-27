@@ -24,9 +24,9 @@ function Client() {
 	var self = this;
 
 	// class members
-	this.controlBall = true;
-	this.x = 20;
-	this.y = 20;
+	this.controlBall = false;
+	this.x = 0;
+	this.y = 0;
 	this.speedX = 0;
 	this.speedY = 0;
 	this.radius = 15;
@@ -35,7 +35,7 @@ function Client() {
 	this.trailMaxSize = 15;
 	this.trail = new Array();
 	
-	//html
+	// html
 	this.html();
 	
 	// do reshape
@@ -105,6 +105,12 @@ Client.prototype.start = function () {
 			lastY = e.clientY;
 		}
 	};
+	
+	//
+	// IMPORTANT!
+	// give ball control to this client
+	//
+	this.getBall(250, 250, 50, 25);
 
 	// set up timer to render screen
 	setInterval(function() {
@@ -114,10 +120,26 @@ Client.prototype.start = function () {
 	// remove ball from this screen after 3 seconds
 	// test to backend support...
 	/*var interval = setInterval(function() {
-		self.controlBall = false;
+		self.dropBall();
 		clearInterval(interval);
 	}, 3000);*/
 };
+
+// called when this client receives control of the ball
+// somehow must be called by WebSocket listener, based on server data
+Client.prototype.getBall = function (posX, posY, speedX, speedY) {
+	this.controlBall = true;
+	this.x = posX;
+	this.y = posY;
+	this.speedX = speedX;
+	this.speedY = speedY;
+}
+
+// called to release the control of the ball from this client
+// must be called by WebSocket client when ball leaves this screen
+Client.prototype.dropBall = function () {
+	this.controlBall = false;
+}
 
 Client.prototype.render = function () {					
 	// erase trail
@@ -129,62 +151,68 @@ Client.prototype.render = function () {
 		this.context.fill();
 	}
 	
-	// while tail has more elements than trailMaxSize remove the first one
-	while (this.trail.length > this.trailMaxSize)
-		this.trail.shift();
-		
 	// if this client isn't controlling the ball anymore remove the first trail element
 	if (!this.controlBall && this.trail.length > 0)
+		this.trail.shift();
+	
+	// while tail has more elements than trailMaxSize remove the first one
+	while (this.trail.length > this.trailMaxSize)
 		this.trail.shift();
 	
 	// erase ball
 	if (this.controlBall) {
 		this.context.fillStyle = "#000000";
 		this.context.beginPath();
-		this.context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, true);
+		this.context.arc(this.x, this.y, this.radius + 1, 0, Math.PI * 2, true);
 		this.context.closePath();
 		this.context.fill();
 	}
-					
-	// update speed
-	this.speedX *= this.friction;
-	this.speedY *= this.friction;
+		
+	// update ball physics if this client has control of the ball
+	if (this.controlBall) {
+		// update speed
+		this.speedX *= this.friction;
+		this.speedY *= this.friction;
 						
-	// update position according to speed
-	this.x += this.speedX;
-	this.y += this.speedY;
+		// update position according to speed
+		this.x += this.speedX;
+		this.y += this.speedY;
 					
-	// create bounce effect on X axis
-	if (this.x - this.radius < 0 || this.x + this.radius > this.canvas.width) {
-		if (this.x - this.radius < 0) {
-			this.x = this.radius;
-		} else if (this.x + this.radius > this.canvas.width) {
-			this.x = this.canvas.width - this.radius;
-		}
+		// create bounce effect on X axis
+		// TODO: this bounce condition will be removed, ball will not bounce on X axis anymore, it will comunicate to server to change client
+		if (this.x - this.radius < 0 || this.x + this.radius > this.canvas.width) {
+			if (this.x - this.radius < 0) {
+				this.x = this.radius;
+			} else if (this.x + this.radius > this.canvas.width) {
+				this.x = this.canvas.width - this.radius;
+			}
 							
-		this.speedX *= -1;
-	}
-	// create bounce effect on Y axis
-	if (this.y - this.radius < 0 || this.y + this.radius > this.canvas.height) {
-		if (this.y - this.radius < 0) {
-			this.y = this.radius;
-		} else if (this.y + this.radius > this.canvas.height) {
-			this.y = this.canvas.height - this.radius;
+			this.speedX *= -1;
 		}
+		// create bounce effect on Y axis
+		if (this.y - this.radius < 0 || this.y + this.radius > this.canvas.height) {
+			if (this.y - this.radius < 0) {
+				this.y = this.radius;
+			} else if (this.y + this.radius > this.canvas.height) {
+				this.y = this.canvas.height - this.radius;
+			}
 
-		this.speedY *= -1;
-	}
+			this.speedY *= -1;
+		}
 					
-	// if speed is too small set it to zero
-	// (avoid values next to zero)
-	if (Math.abs(this.speedX) < 0.1)
-		this.speedX = 0;
-	if (Math.abs(this.speedY) < 0.1)
-		this.speedY = 0;
+		// if speed is too small set it to zero
+		// (avoid values next to zero)
+		if (Math.abs(this.speedX) < 0.1) {
+			this.speedX = 0;
+		}
+		if (Math.abs(this.speedY) < 0.1) {
+			this.speedY = 0;
+		}
+	}
 
-	// draw draw trail
+	// draw trail
 	for (var i = 0; i < this.trail.length; i++) {
-		this.context.fillStyle = "#" + ((i / this.trail.length) * 0xff).toString(16) + "0000";
+		this.context.fillStyle = "#" + ((i / this.trailMaxSize) * 0xff).toString(16) + "0000";
 		this.context.beginPath();
 		this.context.arc(this.trail[i][0], this.trail[i][1], this.radius, 0, Math.PI * 2, true);
 		this.context.closePath();
