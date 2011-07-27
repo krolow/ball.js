@@ -23,16 +23,6 @@ function Client() {
 	
 	var self = this;
 
-	// on resize event
-	window.onresize = function (e) {
-		self.reshape();
-	}
-	
-	// create canvas object and get 2d context
-	this.canvas = document.createElement("canvas");
-	document.getElementsByTagName("body")[0].appendChild(this.canvas);
-	this.context = this.canvas.getContext("2d");
-	
 	// class members
 	this.controlBall = true;
 	this.x = 20;
@@ -45,20 +35,39 @@ function Client() {
 	this.trailMaxSize = 15;
 	this.trail = new Array();
 	
+	//html
+	this.html();
+	
 	// do reshape
 	this.reshape();
 	// start!
 	this.start();
 }
 
+Client.prototype.html = function () {
+	// create canvas object and get 2d context
+	this.canvas = document.createElement("canvas");
+	var body = document.getElementsByTagName("body")[0];
+	body.style.margin = '0';
+	body.appendChild(this.canvas);
+	this.context = this.canvas.getContext("2d");	
+};
+
 Client.prototype.reshape = function () {
+	var self = this;
+	
+	// on resize event
+	window.onresize = function (e) {
+		self.reshape();
+	};
+	
 	if (this.canvas) {
-		this.canvas.width = window.innerWidth + window.screenX * 2;
-		this.canvas.height = window.innerHeight + window.screenY * 2;
+		this.canvas.width = window.innerWidth;
+		this.canvas.height = window.innerHeight;
 		this.context.fillStyle = "#000000";
 		this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 	}
-}
+};
 
 Client.prototype.start = function () {
 	var self = this;
@@ -74,14 +83,14 @@ Client.prototype.start = function () {
 			lastX = e.clientX;
 			lastY = e.clientY;
 		}
-	}
+	};
 				
 	// on mouse up event
 	document.onmouseup = function(e) {
 		if (self.controlBall) {
 			throwing = false;
 		}
-	}
+	};
 				
 	// on mouse move event
 	document.onmousemove = function(e) {
@@ -95,7 +104,7 @@ Client.prototype.start = function () {
 			lastX = e.clientX;
 			lastY = e.clientY;
 		}
-	}
+	};
 
 	// set up timer to render screen
 	setInterval(function() {
@@ -108,7 +117,7 @@ Client.prototype.start = function () {
 		self.controlBall = false;
 		clearInterval(interval);
 	}, 3000);*/
-}
+};
 
 Client.prototype.render = function () {					
 	// erase trail
@@ -192,4 +201,4 @@ Client.prototype.render = function () {
 		this.context.closePath();
 		this.context.fill();
 	}
-}
+};
