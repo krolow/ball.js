@@ -47,7 +47,7 @@ function Client() {
 Client.prototype.html = function () {
 	// create canvas object and get 2d context
 	this.canvas = document.createElement("canvas");
-	var body = document.getElementsByTagName("body")[0];
+	var body = document.getElementById('body');
 	body.style.margin = '0';
 	body.appendChild(this.canvas);
 	this.context = this.canvas.getContext("2d");	
@@ -124,7 +124,7 @@ Client.prototype.render = function () {
 	for (var i = 0; i < this.trail.length; i++) {
 		this.context.fillStyle = "#000000";
 		this.context.beginPath();
-		this.context.arc(this.trail[i][0], this.trail[i][1], this.radius, 0, Math.PI * 2, true);
+		this.context.arc(this.trail[i][0], this.trail[i][1], this.radius + 1, 0, Math.PI * 2, true);
 		this.context.closePath();
 		this.context.fill();
 	}
