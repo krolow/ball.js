@@ -32,7 +32,7 @@ function Client() {
 	this.radius = 15;
 	this.friction = 0.95;
 	
-	this.trailMaxSize = 15;
+	this.trailMaxSize = 20;
 	this.trail = new Array();
 	
 	// html
@@ -212,7 +212,7 @@ Client.prototype.render = function () {
 
 	// draw trail
 	for (var i = 0; i < this.trail.length; i++) {
-		this.context.fillStyle = "#" + ((i / this.trailMaxSize) * 0xff).toString(16) + "0000";
+		this.context.fillStyle = "#" + (Math.round((i / this.trailMaxSize) * 0xff)).toString(16) + "0000";
 		this.context.beginPath();
 		this.context.arc(this.trail[i][0], this.trail[i][1], this.radius, 0, Math.PI * 2, true);
 		this.context.closePath();
