@@ -44,9 +44,9 @@ Client.prototype.socket = function () {
 			}
 		} else {
 			if (data[0] == 0) {
-				self.getBall(window.innerWidth - self.radius, data[1], data[2], data[3]);	
+				self.getBall(window.innerWidth, data[1], data[2], data[3]);	
 			} else {
-				self.getBall(self.radius, data[1], data[2], data[3]);
+				self.getBall(0, data[1], data[2], data[3]);
 			}
 			
 		}
@@ -182,8 +182,8 @@ Client.prototype.render = function () {
 		this.y += this.speedY;
 		
 		// if ball cross screen edges of this client (left or right) send a message to server
-		if (this.controlBall && (this.x - this.radius < 0 || this.x + this.radius > this.canvas.width)) {
-			if (this.x - this.radius < 0) {
+		if (this.controlBall && (this.x < -this.radius || this.x > this.canvas.width + this.radius)) {
+			if (this.x < -this.radius) {
 				var values = [0, this.y, this.speedX, this.speedY];	
 			} else {
 				var values = [1, this.y, this.speedX, this.speedY];
