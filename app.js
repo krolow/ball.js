@@ -5,12 +5,6 @@ var url = require('url');
 var path = require('path');
 var fs = require('fs');
 
-var server = ws.createServer();
-
-var clients = {};
-var online = 0;
-
-
 http.createServer(function(request, response) {
     var uri = url.parse(request.url).pathname;
     var filename = path.join(process.cwd(), 'client/' + uri);
@@ -39,27 +33,58 @@ http.createServer(function(request, response) {
 
 console.log('HTTP server running at port 8090');
 
+
+
+var clients = {};
+var clientsArray = new Array();
+var online = 0;
+var server = ws.createServer();
+
+
 server.addListener('connection', function (connection) {
 
-	connection.index = 0;
-	clients[connection.id] = connection;
-	online = online + 1;
+	var self = this;
 	
-	this.broadcast(online.toString());
+	online += 1;
+	
+	clientsArray.push(connection.id);
+	connection.index = clientsArray.length - 1;
+	
+	this.broadcast(JSON.stringify({'online' : online}));
 	
 	/**
 	 * Message
 	 */
 	connection.addListener('message', function(msg) {
-		var values = msg.split('|');
-		server.send(msg);
+		var current = clientsArray[connection.index];
+		
+		var values = JSON.parse(msg);
+		var index = 0;
+		if (values[0] == 0) {
+			if (clientsArray[connection.index + 1]) {
+				index = connection.index + 1;
+			} else {
+				index = 0;
+			}
+		} else {
+			if (clientsArray[connection.index - 1]) {
+				index = connection.index - 1;
+			} else {
+				index = clientsArray.length - 1;
+			}			
+		}
+		console.log(index);
+		console.log(clientsArray[index]);
+		self.send(clientsArray[index], msg);
 	});
 	
 	connection.addListener('close', function () {
-		console.log(connection);
+		online -= 1;
 		delete clients[connection.id];
-		online = online - 1; 
+		clientsArray.splice(connection.index, 1);
 		connection.close();
+		
+		self.broadcast(JSON.stringify({'online' : online}));
 	});	
 });
 

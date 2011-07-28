@@ -1,26 +1,5 @@
-window.onload = function () {
-	new Client();
-}
-
 function Client() {
-	/*var socket = new WebSocket("ws://192.168.1.114:3040");
 
-	socket.onopen = function (e) {
-		console.log("onopen");
-	}
-	
-	socket.onmessage = function (e) {
-		console.log("onmessage");
-	}
-	
-	socket.onerror = function (e) {
-		console.log("onerror");
-	}
-	
-	socket.onclose = function (e) {
-		console.log("onclose");
-	}*/
-	
 	var self = this;
 
 	// class members
@@ -35,6 +14,9 @@ function Client() {
 	this.trailMaxSize = 15;
 	this.trail = new Array();
 	
+	//socket
+	this.socket();
+	
 	// html
 	this.html();
 	
@@ -42,7 +24,38 @@ function Client() {
 	this.reshape();
 	// start!
 	this.start();
-}
+};
+
+Client.prototype.socket = function () {
+	var self = this;
+	
+	this.socket = new WebSocket("ws://localhost:3040");
+
+	this.socket.onmessage = function (e) {
+		var data =  JSON.parse(e.data);
+		console.log(data);
+		if (data.online) {
+			if (data.online == 1) {
+				self.getBall(250, 250, 50, 25);
+			}
+		} else {
+			if (data[0] == 0) {
+				self.getBall(window.innerWidth, data[1], data[2], data[3]);	
+			} else {
+				self.getBall(0, data[1], data[2], data[3]);
+			}
+			
+		}
+	};
+	
+	this.socket.onerror = function (e) {
+		console.log("onerror");
+	};
+	
+	this.socket.onclose = function (e) {
+		console.log("onclose");
+	};	
+};
 
 Client.prototype.html = function () {
 	// create canvas object and get 2d context
@@ -110,7 +123,7 @@ Client.prototype.start = function () {
 	// IMPORTANT!
 	// give ball control to this client
 	//
-	this.getBall(250, 250, 50, 25);
+//	this.getBall(250, 250, 50, 25);
 
 	// set up timer to render screen
 	setInterval(function() {
@@ -133,15 +146,16 @@ Client.prototype.getBall = function (posX, posY, speedX, speedY) {
 	this.y = posY;
 	this.speedX = speedX;
 	this.speedY = speedY;
-}
+};
 
 // called to release the control of the ball from this client
 // must be called by WebSocket client when ball leaves this screen
 Client.prototype.dropBall = function () {
 	this.controlBall = false;
-}
+};
 
-Client.prototype.render = function () {					
+Client.prototype.render = function () {
+	
 	// erase trail
 	for (var i = 0; i < this.trail.length; i++) {
 		this.context.fillStyle = "#000000";
@@ -173,21 +187,22 @@ Client.prototype.render = function () {
 		// update speed
 		this.speedX *= this.friction;
 		this.speedY *= this.friction;
-						
+				
 		// update position according to speed
 		this.x += this.speedX;
 		this.y += this.speedY;
-					
+		
+		
 		// create bounce effect on X axis
 		// TODO: this bounce condition will be removed, ball will not bounce on X axis anymore, it will comunicate to server to change client
-		if (this.x - this.radius < 0 || this.x + this.radius > this.canvas.width) {
+		if (this.controlBall && (this.x - this.radius < 0 || this.x + this.radius > this.canvas.width)) {
 			if (this.x - this.radius < 0) {
-				this.x = this.radius;
-			} else if (this.x + this.radius > this.canvas.width) {
-				this.x = this.canvas.width - this.radius;
+				var values = [0, this.y, this.speedX, this.speedY];	
+			} else {
+				var values = [1, this.y, this.speedX, this.speedY];
 			}
-							
-			this.speedX *= -1;
+			this.dropBall();
+			this.socket.send(JSON.stringify(values));
 		}
 		// create bounce effect on Y axis
 		if (this.y - this.radius < 0 || this.y + this.radius > this.canvas.height) {
@@ -208,6 +223,8 @@ Client.prototype.render = function () {
 		if (Math.abs(this.speedY) < 0.1) {
 			this.speedY = 0;
 		}
+		
+		
 	}
 
 	// draw trail
@@ -229,4 +246,8 @@ Client.prototype.render = function () {
 		this.context.closePath();
 		this.context.fill();
 	}
+};
+
+window.onload = function () {
+	new Client();
 };
