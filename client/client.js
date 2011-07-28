@@ -11,10 +11,14 @@ function Client() {
 	this.radius = 15;
 	this.friction = 0.95;
 	
+	this.lastMouseX = 0;
+	this.lastMouseY = 0;
+	this.throwingBall = false;
+	
 	this.trailMaxSize = 20;
 	this.trail = new Array();
 	
-	//socket
+	// socket
 	this.socket();
 	
 	// html
@@ -32,17 +36,17 @@ Client.prototype.socket = function () {
 	this.socket = new WebSocket("ws://localhost:3040");
 
 	this.socket.onmessage = function (e) {
-		var data =  JSON.parse(e.data);
+		var data = JSON.parse(e.data);
 		console.log(data);
 		if (data.online) {
 			if (data.online == 1) {
-				self.getBall(250, 250, 50, 25);
+				self.getBall(250, 250, 5, 15);
 			}
 		} else {
 			if (data[0] == 0) {
-				self.getBall(window.innerWidth, data[1], data[2], data[3]);	
+				self.getBall(window.innerWidth - self.radius, data[1], data[2], data[3]);	
 			} else {
-				self.getBall(0, data[1], data[2], data[3]);
+				self.getBall(self.radius, data[1], data[2], data[3]);
 			}
 			
 		}
@@ -85,61 +89,44 @@ Client.prototype.reshape = function () {
 Client.prototype.start = function () {
 	var self = this;
 	var fps = 30;
-
-	var throwing = false;
-	var lastX = 0, lastY = 0;
 		
 	// on mouse down event
 	document.onmousedown = function(e) {
 		if (self.controlBall) {
-			throwing = true;
-			lastX = e.clientX;
-			lastY = e.clientY;
+			self.throwingBall = true;
+			self.lastMouseX = e.clientX;
+			self.lastMouseY = e.clientY;
 		}
 	};
 				
 	// on mouse up event
 	document.onmouseup = function(e) {
 		if (self.controlBall) {
-			throwing = false;
+			self.throwingBall = false;
 		}
 	};
 				
 	// on mouse move event
 	document.onmousemove = function(e) {
-		if (self.controlBall && throwing) {
-			var offsetX = e.clientX - lastX;
-			var offsetY = e.clientY - lastY;
+		if (self.controlBall && self.throwingBall) {
+			var offsetX = e.clientX - self.lastMouseX;
+			var offsetY = e.clientY - self.lastMouseY;
 						
 			self.speedX += offsetX / 5;
 			self.speedY += offsetY / 5;
 					
-			lastX = e.clientX;
-			lastY = e.clientY;
+			self.lastMouseX = e.clientX;
+			self.lastMouseY = e.clientY;
 		}
 	};
-	
-	//
-	// IMPORTANT!
-	// give ball control to this client
-	//
-//	this.getBall(250, 250, 50, 25);
 
 	// set up timer to render screen
 	setInterval(function() {
 		self.render();
 	}, 1000 / fps);
-	
-	// remove ball from this screen after 3 seconds
-	// test to backend support...
-	/*var interval = setInterval(function() {
-		self.dropBall();
-		clearInterval(interval);
-	}, 3000);*/
 };
 
 // called when this client receives control of the ball
-// somehow must be called by WebSocket listener, based on server data
 Client.prototype.getBall = function (posX, posY, speedX, speedY) {
 	this.controlBall = true;
 	this.x = posX;
@@ -149,9 +136,11 @@ Client.prototype.getBall = function (posX, posY, speedX, speedY) {
 };
 
 // called to release the control of the ball from this client
-// must be called by WebSocket client when ball leaves this screen
 Client.prototype.dropBall = function () {
 	this.controlBall = false;
+	this.lastMouseX = 0;
+	this.lastMouseY = 0;
+	this.throwingBall = false;
 };
 
 Client.prototype.render = function () {
@@ -192,15 +181,14 @@ Client.prototype.render = function () {
 		this.x += this.speedX;
 		this.y += this.speedY;
 		
-		
-		// create bounce effect on X axis
-		// TODO: this bounce condition will be removed, ball will not bounce on X axis anymore, it will comunicate to server to change client
+		// if ball cross screen edges of this client (left or right) send a message to server
 		if (this.controlBall && (this.x - this.radius < 0 || this.x + this.radius > this.canvas.width)) {
 			if (this.x - this.radius < 0) {
 				var values = [0, this.y, this.speedX, this.speedY];	
 			} else {
 				var values = [1, this.y, this.speedX, this.speedY];
 			}
+
 			this.dropBall();
 			this.socket.send(JSON.stringify(values));
 		}
@@ -217,14 +205,12 @@ Client.prototype.render = function () {
 					
 		// if speed is too small set it to zero
 		// (avoid values next to zero)
-		if (Math.abs(this.speedX) < 0.1) {
+		if (Math.abs(this.speedX) < 0.01) {
 			this.speedX = 0;
 		}
-		if (Math.abs(this.speedY) < 0.1) {
+		if (Math.abs(this.speedY) < 0.01) {
 			this.speedY = 0;
 		}
-		
-		
 	}
 
 	// draw trail
