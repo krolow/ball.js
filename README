@@ -1,0 +1,14 @@
+Ball.js
+--------------
+
+A simple test, where the balls cross monitores that are connected into the application...
+
+
+To run, clone the project and start the app:
+
+node app.js
+
+after that you are able to access: http://localhost:8090/client.html
+
+
+that's it!
