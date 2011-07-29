@@ -133,6 +133,14 @@ Client.prototype.getBall = function (posX, posY, speedX, speedY) {
 	this.y = posY;
 	this.speedX = speedX;
 	this.speedY = speedY;
+	
+	// create fake trail
+	for (var i = this.trailMaxSize - 1; i >= 0 ; i--) {
+		var trailX = this.x - this.speedX * i;
+		var trailY = this.y - this.speedY * i;
+	
+		this.trail.push([trailX, trailY]);
+	}
 };
 
 // called to release the control of the ball from this client
