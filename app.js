@@ -35,8 +35,7 @@ console.log('HTTP server running at port 8090');
 
 
 
-var clients = {};
-var clientsArray = new Array();
+var clients = new Array();
 var online = 0;
 var server = ws.createServer();
 
@@ -44,50 +43,44 @@ var server = ws.createServer();
 server.addListener('connection', function (connection) {
 
 	var self = this;
+	var withBall = 0;
 	
 	online += 1;
 	
-	clientsArray.push(connection.id);
-	connection.index = clientsArray.length - 1;
+	clients.push(connection.id);
 	
-	this.broadcast(JSON.stringify({'online' : online}));
+	this.broadcast(JSON.stringify({'type' : 'online', 'data' : online}));
 	
-	/**
-	 * Message
-	 */
-	connection.addListener('message', function(msg) {
-		var current = clientsArray[connection.index];
+	connection.addListener('message', function(data) {
+		var data = JSON.parse(data);
 		
-		var values = JSON.parse(msg);
-		var index = 0;
+		var values = data.data;
+		var index = clients.indexOf(connection.id);
+		
 		if (values[0] == 0) {
-			if (clientsArray[connection.index + 1]) {
-				index = connection.index + 1;
+			
+			if (clients[index + 1]) {
+				withBall = index + 1;
 			} else {
-				index = 0;
+				withBall = 0;
 			}
 		} else {
-			if (clientsArray[connection.index - 1]) {
-				index = connection.index - 1;
+			if (clients[index - 1]) {
+				withBall = index - 1;
 			} else {
-				index = clientsArray.length - 1;
+				withBall = clients.length - 1;
 			}			
 		}
-		console.log(index);
-		console.log(clientsArray[index]);
-		self.send(clientsArray[index], msg);
+		self.send(clients[withBall], JSON.stringify({'type' : 'ball.get', 'data' : data.data}));
 	});
 	
 	connection.addListener('close', function () {
-		online -= 1;
-		delete clients[connection.id];
-		clientsArray.splice(connection.index, 1);
+		clients.splice(clients.indexOf(connection.id), 1);		
 		connection.close();
-		
-		self.broadcast(JSON.stringify({'online' : online}));
+		self.broadcast(JSON.stringify({'type' : 'online', 'data' : clients.length}));
 	});	
 });
 
-server.listen(3040);
+server.listen(8190);
 
-console.log('Websocket running at port 3040');
+console.log('Websocket running at port 8190');
